@@ -1,14 +1,16 @@
 # Zen Writer
 
-A standalone native macOS Markdown writing app. SwiftUI for the window and document lifecycle, AppKit for the text editor. Plain UTF-8 Markdown files; no database and no runtime web view.
+An open-source native macOS Markdown writing app, built as a personal space for clear thinking. SwiftUI for the window and document lifecycle, AppKit for the text editor. Plain UTF-8 Markdown files; no database and no runtime web view.
 
 ## Run
 
 The app requires macOS 14 or newer. It runs by itself: no website, local web server, browser, account, or internet connection is needed.
 
-To build from source, use Xcode or working Swift command-line tools.
+To build from source, use Xcode or working Swift command-line tools with Swift 6.0 or newer. Clone the repository over HTTPS; no GitHub account is required to clone a public repository.
 
 ```sh
+git clone https://github.com/nimblegeek/zen-writer.git
+cd zen-writer
 ./scripts/build-app.sh
 open 'build/Zen Writer.app'
 ```
@@ -17,7 +19,7 @@ Open `Package.swift` in Xcode to work on the source. `./scripts/test.sh` runs th
 
 Copy `build/Zen Writer.app` into `~/Applications` or `/Applications` to install it. The app bundle contains everything it needs; the source project is only needed for development.
 
-The generated app is ad-hoc signed for local use and is not notarized by Apple. The first GitHub release is a personal preview build for Apple Silicon Macs running macOS 14 or newer; downloaded copies may be blocked by Gatekeeper. Building from source is available with the commands above.
+The generated app is ad-hoc signed for local use and is not notarized by Apple. The GitHub releases are preview builds for Apple Silicon Macs running macOS 14 or newer; downloaded copies may be blocked by Gatekeeper. Building from source is available with the commands above.
 
 ## Releases
 
@@ -65,6 +67,18 @@ For Jonas’s blog, you can explicitly select its `src/thoughts` directory as th
 A matching first Markdown heading becomes the article title, avoiding a duplicate heading in the body. Existing frontmatter fields are preserved. The first version exports text; media attachments remain separate files.
 
 Automated tests cover archive folders, renaming and moves, imports, duplicate protection, article parsing, Unicode, path validation, local export, replacement, concurrent changes, and symbolic links. Test exports use temporary folders with no website structure.
+
+## Build on it
+
+Fork it, make it your own, or send a pull request. Bug reports and focused improvements are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for the development workflow.
+
+[Watch the 19-second demo](https://www.jonasasihlen.com/demos/zen-writer-19s.mp4) or [download a release](https://github.com/nimblegeek/zen-writer/releases).
+
+## License
+
+Zen Writer's original source code is available under the [MIT License](LICENSE). You can use, modify, and redistribute it, including commercially, while keeping the copyright and license notice.
+
+Bundled JetBrains Mono and Work Sans fonts remain under their own SIL Open Font License 1.1; the license files and upstream revisions are in [Resources/Fonts](Resources/Fonts). Circular is not bundled.
 
 ## Design references
 
