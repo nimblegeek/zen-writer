@@ -89,10 +89,9 @@ final class ArchiveModel: ObservableObject {
                 guard let document else { return }
                 if document.windowControllers.isEmpty { document.makeWindowControllers() }
                 if let target = document.windowControllers.first?.window {
-                    target.tabbingIdentifier = "ZenWriterDocuments"
-                    if let window, target != window, !(window.tabbedWindows?.contains(target) ?? false) {
-                        window.tabbingIdentifier = "ZenWriterDocuments"
-                        window.addTabbedWindow(target, ordered: .above)
+                    target.tabbingMode = .disallowed
+                    if let window, target != window, !window.styleMask.contains(.fullScreen), !target.styleMask.contains(.fullScreen) {
+                        target.setFrame(window.frame, display: false)
                     }
                     target.makeKeyAndOrderFront(nil)
                 } else { document.showWindows() }
@@ -132,7 +131,10 @@ final class ArchiveModel: ObservableObject {
 struct WindowReader: NSViewRepresentable {
     let onWindow: (NSWindow) -> Void
     func makeNSView(context: Context) -> WindowView { let view = WindowView(); view.onWindow = onWindow; return view }
-    func updateNSView(_ view: WindowView, context: Context) { view.onWindow = onWindow }
+    func updateNSView(_ view: WindowView, context: Context) {
+        view.onWindow = onWindow
+        if let window = view.window { DispatchQueue.main.async { view.onWindow?(window) } }
+    }
     final class WindowView: NSView {
         var onWindow: ((NSWindow) -> Void)?
         override func viewDidMoveToWindow() {

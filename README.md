@@ -37,8 +37,14 @@ Artifacts are written to `build/releases/`, which is excluded from Git. The pack
 - **⌘F**: find in the native editor. Standard undo, spelling, and text editing shortcuts work.
 - **⇧⌘P**: switch between Markdown and a native reading preview.
 - **⇧⌘F**: focus mode; repeat to leave.
-- The appearance menu offers **Gruvbox Light**, **Gruvbox Dark**, and **Tokyo Night**. The theme and text size persist across launches.
+- **Aa** opens the font and appearance panel: **Work Sans** for writing, **JetBrains Mono** for technical documents, and **Circular style**. JetBrains Mono and Work Sans are bundled with their SIL OFL licenses. Circular uses an installed Circular font when available, otherwise macOS’s Avenir Next; the interface names the actual font. Font family, text size, and the **Gruvbox Light**, **Gruvbox Dark**, or **Tokyo Night** theme persist across launches. The editor and reading preview use the selected font; code blocks in the preview use JetBrains Mono.
 - The preview handles headings, paragraphs, links, emphasis, basic lists, quotes, and fenced code. It is a reading preview, not an exact renderer of the website. Embedded media, tables, and nested lists remain in the Markdown but are not fully rendered in this first version.
+
+## Window and menus
+
+The app has its own themed title bar, window buttons, document strip, archive selection, and font/document menus. Drag an empty part of the top bar to move the window; double-click it to zoom. The top-left controls close, minimize, and maximize or restore the window. Closing still uses macOS document handling to protect unsaved writing.
+
+The **…** menu contains New, Open, Save, and Export. The macOS global menu bar, keyboard shortcuts, and standard file dialogs remain available. Appearance changes only affect how Markdown is displayed, never the file’s contents.
 
 ## Local writing archive
 
@@ -46,7 +52,7 @@ Artifacts are written to `build/releases/`, which is excluded from Git. The pack
 
 The archive starts in `~/Library/Application Support/Zen Writer/Archive`. It contains ordinary `.md` files and folders, with no account or database. The sidebar’s options menu can import Markdown files (copies; originals stay in place), reveal the archive in Finder, select another archive folder, or refresh the list. Choosing a different folder does not move your existing files. The selected archive and sidebar visibility persist across launches.
 
-Selecting a text opens it in a native document tab. Existing documents stay open, preserving edits and undo history; use **⌘S** to save immediately. Renaming or moving an open text uses macOS document handling. Close texts inside a folder before moving or renaming that folder. Existing files are never silently replaced. Files created elsewhere appear after returning to the app or choosing **Refresh archive**. Use Finder to delete or reorganize closed files.
+Selecting a text opens it in the app’s themed document strip, backed by native macOS documents. Existing documents stay open, preserving edits and undo history; use **⌘S** to save immediately. Renaming or moving an open text uses macOS document handling. Close texts inside a folder before moving or renaming that folder. Existing files are never silently replaced. Files created elsewhere appear after returning to the app or choosing **Refresh archive**. Use Finder to delete or reorganize closed files.
 
 ## Optional article export
 
@@ -63,4 +69,5 @@ Automated tests cover archive folders, renaming and moves, imports, duplicate pr
 ## Design references
 
 - Native document lifecycle: [Apple DocumentGroup](https://developer.apple.com/documentation/swiftui/documentgroup)
+- Bundled fonts: [JetBrains Mono](https://github.com/JetBrains/JetBrainsMono), [Work Sans](https://github.com/weiweihuanghuang/Work-Sans). Exact upstream revisions and licenses are in `Resources/Fonts`.
 - Palette values: [Gruvbox](https://github.com/morhetz/gruvbox/blob/master/colors/gruvbox.vim), [Tokyo Night](https://github.com/folke/tokyonight.nvim/tree/main/lua/tokyonight/colors)

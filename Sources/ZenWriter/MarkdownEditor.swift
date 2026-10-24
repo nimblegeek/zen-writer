@@ -5,6 +5,7 @@ struct MarkdownEditor: NSViewRepresentable {
     @Binding var text: String
     let theme: WriterTheme
     let fontSize: Double
+    let writingFont: WriterFont
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
     func makeNSView(context: Context) -> NSScrollView {
@@ -52,7 +53,7 @@ struct MarkdownEditor: NSViewRepresentable {
         editor.textColor = theme.foreground
         editor.insertionPointColor = theme.accent
         editor.selectedTextAttributes = [.backgroundColor: theme.selection, .foregroundColor: theme.foreground]
-        let font = NSFont.monospacedSystemFont(ofSize: fontSize, weight: .regular)
+        let font = writingFont.native(size: fontSize)
         let paragraph = NSMutableParagraphStyle()
         paragraph.lineSpacing = fontSize * 0.42
         editor.font = font

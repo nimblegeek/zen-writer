@@ -5,19 +5,20 @@ struct MarkdownPreview: View {
     let markdown: String
     let theme: WriterTheme
     let fontSize: Double
+    var writingFont: WriterFont = .workSans
     private var blocks: [Block] { Block.parse(Article(markdown: markdown).body) }
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 let article = Article(markdown: markdown)
                 if markdown.hasPrefix("---\n"), !article.title.isEmpty {
-                    Text(article.title).font(.system(size: 30, weight: .semibold, design: .serif))
+                    Text(article.title).font(writingFont.swiftUI(size: 30, semibold: true))
                     Text(article.date).font(.system(size: 11, design: .monospaced)).foregroundStyle(Color(theme.muted))
                 }
                 ForEach(Array(blocks.enumerated()), id: \.offset) { _, block in
                     switch block {
                     case .heading(let text, let level):
-                        Text(inline(text)).font(.system(size: max(19, 34 - Double(level) * 3), weight: .semibold, design: .serif)).foregroundStyle(Color(theme.accent)).padding(.top, 10)
+                        Text(inline(text)).font(writingFont.swiftUI(size: max(19, 34 - Double(level) * 3), semibold: true)).foregroundStyle(Color(theme.accent)).padding(.top, 10)
                     case .paragraph(let text):
                         Text(inline(text)).lineSpacing(7)
                     case .quote(let text):
@@ -26,7 +27,7 @@ struct MarkdownPreview: View {
                             Text(inline(text)).italic().foregroundStyle(Color(theme.muted)).lineSpacing(7)
                         }.fixedSize(horizontal: false, vertical: true)
                     case .code(let text):
-                        ScrollView(.horizontal) { Text(text).font(.system(size: fontSize - 2, design: .monospaced)).textSelection(.enabled).padding(18) }
+                        ScrollView(.horizontal) { Text(text).font(WriterFont.jetBrainsMono.swiftUI(size: fontSize - 2)).textSelection(.enabled).padding(18) }
                             .background(Color(theme.surface), in: RoundedRectangle(cornerRadius: 8))
                     case .list(let text, let bullet):
                         HStack(alignment: .top, spacing: 12) { Text(bullet).foregroundStyle(Color(theme.accent)); Text(inline(text)).lineSpacing(5) }
@@ -36,7 +37,7 @@ struct MarkdownPreview: View {
                 }
                 if blocks.isEmpty { Text("Your words, with room to breathe.").foregroundStyle(Color(theme.muted)) }
             }
-            .font(.system(size: fontSize, design: .serif))
+            .font(writingFont.swiftUI(size: fontSize))
             .foregroundStyle(Color(theme.foreground))
             .textSelection(.enabled)
             .frame(maxWidth: 660, alignment: .leading)
