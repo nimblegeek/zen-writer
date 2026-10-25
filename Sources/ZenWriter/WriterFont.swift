@@ -3,7 +3,7 @@ import CoreText
 import SwiftUI
 
 enum WriterFont: String, CaseIterable, Identifiable {
-    case workSans, jetBrainsMono, circular
+    case workSans, notoSerif, menlo, circular
     var id: String { rawValue }
     static func registerBundledFonts() {
         var directory = Bundle.main.resourceURL?.appendingPathComponent("Fonts")
@@ -21,15 +21,22 @@ enum WriterFont: String, CaseIterable, Identifiable {
     var name: String {
         switch self {
         case .workSans: "Work Sans"
-        case .jetBrainsMono: "JetBrains Mono"
+        case .notoSerif: "Noto Serif"
+        case .menlo: "Menlo"
         case .circular: Self.circularFamily ?? "Circular style"
         }
     }
-    var actualName: String { self == .circular ? Self.circularFamily ?? "Avenir Next" : name }
+    var actualName: String {
+        switch self {
+        case .circular: Self.circularFamily ?? "Avenir Next"
+        default: name
+        }
+    }
     var detail: String {
         switch self {
         case .workSans: "Clear, unhurried writing"
-        case .jetBrainsMono: "Technical notes & code"
+        case .notoSerif: "Essays & thoughtful reading"
+        case .menlo: "Technical notes & code"
         case .circular: Self.circularFamily == nil ? "Avenir Next · built-in alternative" : "Your installed Circular font"
         }
     }
@@ -37,8 +44,11 @@ enum WriterFont: String, CaseIterable, Identifiable {
         switch self {
         case .workSans:
             return NSFont(name: semibold ? "WorkSans-SemiBold" : "WorkSans-Regular", size: size) ?? .systemFont(ofSize: size, weight: semibold ? .semibold : .regular)
-        case .jetBrainsMono:
-            return NSFont(name: semibold ? "JetBrainsMono-SemiBold" : "JetBrainsMono-Regular", size: size) ?? .monospacedSystemFont(ofSize: size, weight: semibold ? .semibold : .regular)
+        case .notoSerif:
+            return NSFont(name: semibold ? "NotoSerif-SemiBold" : "NotoSerif-Regular", size: size) ?? .systemFont(ofSize: size, weight: semibold ? .semibold : .regular)
+        case .menlo:
+            return NSFont(name: semibold ? "Menlo-Bold" : "Menlo-Regular", size: size)
+                ?? .monospacedSystemFont(ofSize: size, weight: semibold ? .semibold : .regular)
         case .circular:
             if let family = Self.circularFamily, let font = NSFontManager.shared.font(withFamily: family, traits: [], weight: semibold ? 9 : 5, size: size) { return font }
             return NSFont(name: semibold ? "AvenirNext-DemiBold" : "AvenirNext-Regular", size: size) ?? .systemFont(ofSize: size)

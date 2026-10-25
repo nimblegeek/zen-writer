@@ -29,6 +29,7 @@ struct ArchiveSidebar: View {
     @State private var selection: URL?
     @State private var operation: ArchiveOperation?
     @State private var showOptions = false
+    @State private var trashCandidate: ArchiveItem?
     private var parent: URL { archive.parent(for: selection) }
 
     var body: some View {
@@ -47,10 +48,10 @@ struct ArchiveSidebar: View {
                     Button { selection = archive.root } label: {
                         Label("All writing", systemImage: "tray")
                             .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 12).padding(.vertical, 9)
-                            .background(selection == archive.root ? Color(theme.selection) : .clear, in: RoundedRectangle(cornerRadius: 7))
+                            .background(selection == archive.root ? Color(theme.selection) : .clear, in: RoundedRectangle(cornerRadius: WriterCorners.control, style: .continuous))
                     }.buttonStyle(.plain)
                         .contextMenu { Button("New text") { operation = .text(archive.root) }; Button("New folder") { operation = .folder(archive.root) } }
-                    ArchiveRows(items: archive.items, selection: $selection, theme: theme) { operation = $0 }
+                    ArchiveRows(items: archive.items, selection: $selection, theme: theme, operate: { operation = $0 }, trash: { trashCandidate = $0 })
                 }.padding(.horizontal, 12).padding(.vertical, 8)
             }
             .font(WriterFont.workSans.swiftUI(size: 13)).foregroundStyle(Color(theme.foreground))
@@ -66,7 +67,10 @@ struct ArchiveSidebar: View {
             Divider().overlay(Color(theme.muted).opacity(0.12))
             HStack {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("Local files").font(.system(size: 11, weight: .medium))
+                    Button { NSWorkspace.shared.open(archive.root) } label: {
+                        Label("Local files", systemImage: "folder")
+                    }.buttonStyle(.plain).font(.system(size: 11, weight: .medium))
+                        .help(archive.root.path).accessibilityLabel("Show archive folder in Finder")
                     Text("\(archive.fileCount) \(archive.fileCount == 1 ? "text" : "texts")").font(.system(size: 10)).foregroundStyle(Color(theme.muted))
                 }
                 Spacer()
@@ -74,6 +78,16 @@ struct ArchiveSidebar: View {
                     .buttonStyle(QuietButtonStyle(theme: theme)).accessibilityLabel("Archive options")
                     .popover(isPresented: $showOptions, arrowEdge: .top) {
                         VStack(alignment: .leading, spacing: 3) {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("SAVED LOCALLY").font(.system(size: 10, design: .monospaced)).tracking(1)
+                                Text(archive.root.path).font(WriterFont.workSans.swiftUI(size: 11)).textSelection(.enabled)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }.foregroundStyle(Color(theme.muted)).padding(10)
+                            option("Copy folder path", symbol: "doc.on.doc") {
+                                NSPasteboard.general.clearContents()
+                                NSPasteboard.general.setString(archive.root.path, forType: .string)
+                            }
+                            Rectangle().fill(Color(theme.muted).opacity(0.15)).frame(height: 1).padding(.vertical, 5)
                             option("Import Markdown…", symbol: "doc.badge.plus") { archive.importFiles(parent: parent) }
                             option("Show archive in Finder", symbol: "folder") { NSWorkspace.shared.open(archive.root) }
                             option("Choose archive folder…", symbol: "folder.badge.gearshape") { archive.chooseFolder() }
@@ -90,7 +104,23 @@ struct ArchiveSidebar: View {
         .onChange(of: selection) { _, value in
             if let item = archive.item(at: value), !item.isFolder { archive.open(item.url, from: window.window) }
         }
+        .onChange(of: archive.items) { _, _ in
+            if let selected = selection, selected != archive.root, archive.item(at: selected) == nil { selection = archive.root }
+        }
         .sheet(item: $operation) { operation in ArchiveEditSheet(operation: operation, window: window, theme: theme) }
+        .confirmationDialog("Move to Trash?", isPresented: Binding(get: { trashCandidate != nil }, set: { if !$0 { trashCandidate = nil } }), titleVisibility: .visible, presenting: trashCandidate) { item in
+            Button("Move to Trash", role: .destructive) {
+                Task { @MainActor in
+                    do { try await archive.trash(item) }
+                    catch { archive.error = error.localizedDescription }
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { item in
+            Text(item.isFolder
+                 ? "“\(item.name)” and everything inside it will move to Trash. Open texts will be saved and closed. You can restore the folder from Finder’s Trash."
+                 : "“\(item.url.lastPathComponent)” will move to Trash. If open, it will be saved and closed. You can restore it from Finder’s Trash.")
+        }
     }
     private func option(_ title: String, symbol: String, run: @escaping () -> Void) -> some View {
         Button {
@@ -109,6 +139,7 @@ private struct ArchiveRows: View {
     @Binding var selection: URL?
     let theme: WriterTheme
     let operate: (ArchiveOperation) -> Void
+    let trash: (ArchiveItem) -> Void
     var body: some View {
         ForEach(items) { item in
             VStack(alignment: .leading, spacing: 3) {
@@ -127,10 +158,10 @@ private struct ArchiveRows: View {
                             .lineLimit(1).frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 9)
                     }.buttonStyle(.plain).help(item.url.lastPathComponent)
                 }.padding(.horizontal, 7)
-                    .background(selection == item.url ? Color(theme.selection) : .clear, in: RoundedRectangle(cornerRadius: 7))
+                    .background(selection == item.url ? Color(theme.selection) : .clear, in: RoundedRectangle(cornerRadius: WriterCorners.control, style: .continuous))
                     .contextMenu { actions(item) }
                 if let children = item.children, archive.expandedFolders.contains(item.url) {
-                    ArchiveRows(items: children, selection: $selection, theme: theme, operate: operate).padding(.leading, 14)
+                    ArchiveRows(items: children, selection: $selection, theme: theme, operate: operate, trash: trash).padding(.leading, 14)
                 }
             }
         }
@@ -144,6 +175,9 @@ private struct ArchiveRows: View {
         Button("Rename…") { operate(.rename(item)) }
         Button("Move to folder…") { operate(.move(item)) }
         Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([item.url]) }
+        Divider()
+        Button(role: .destructive) { trash(item) } label: { Label("Move to Trash…", systemImage: "trash") }
+            .disabled(archive.isTrashing)
     }
 }
 

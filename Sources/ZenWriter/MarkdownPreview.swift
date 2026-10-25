@@ -27,8 +27,8 @@ struct MarkdownPreview: View {
                             Text(inline(text)).italic().foregroundStyle(Color(theme.muted)).lineSpacing(7)
                         }.fixedSize(horizontal: false, vertical: true)
                     case .code(let text):
-                        ScrollView(.horizontal) { Text(text).font(WriterFont.jetBrainsMono.swiftUI(size: fontSize - 2)).textSelection(.enabled).padding(18) }
-                            .background(Color(theme.surface), in: RoundedRectangle(cornerRadius: 8))
+                        ScrollView(.horizontal) { Text(text).font(WriterFont.menlo.swiftUI(size: fontSize - 2)).textSelection(.enabled).padding(18) }
+                            .background(Color(theme.surface), in: RoundedRectangle(cornerRadius: WriterCorners.card, style: .continuous))
                     case .list(let text, let bullet):
                         HStack(alignment: .top, spacing: 12) { Text(bullet).foregroundStyle(Color(theme.accent)); Text(inline(text)).lineSpacing(5) }
                     case .rule:

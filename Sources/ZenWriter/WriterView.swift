@@ -20,6 +20,9 @@ struct WriterView: View {
     private var theme: WriterTheme { WriterTheme(rawValue: themeName) ?? .gruvboxDark }
     private var writingFont: WriterFont { WriterFont(rawValue: fontName) ?? .workSans }
     private var words: Int { Article(markdown: document.text).wordCount }
+    private var windowShape: RoundedRectangle {
+        RoundedRectangle(cornerRadius: window.isFullScreen ? 0 : WriterCorners.window, style: .continuous)
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -68,7 +71,8 @@ struct WriterView: View {
             }
         }
         .foregroundStyle(Color(theme.foreground)).background(Color(theme.background))
-        .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Color(theme.muted).opacity(0.12), lineWidth: 1).allowsHitTesting(false))
+        .clipShape(windowShape)
+        .overlay(windowShape.strokeBorder(Color(theme.muted).opacity(0.12), lineWidth: 1).allowsHitTesting(false))
         .tint(Color(theme.accent)).preferredColorScheme(theme.scheme)
         .frame(minWidth: sidebarVisible ? 856 : 680, minHeight: 400)
         .ignoresSafeArea(.container, edges: .top)

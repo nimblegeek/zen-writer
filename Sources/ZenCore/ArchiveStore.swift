@@ -81,6 +81,21 @@ public struct ArchiveStore: Sendable {
         try validateMove(from: source, to: destination)
         try FileManager.default.moveItem(at: source, to: destination)
     }
+    public func trash(_ source: URL) throws {
+        try trash(source) { url in
+            try FileManager.default.trashItem(at: url, resultingItemURL: nil)
+        }
+    }
+    // Keep validation shared between the native Trash operation and isolated filesystem tests.
+    func trash(_ source: URL, using moveToTrash: (URL) throws -> Void) throws {
+        try validate(source, allowRoot: false)
+        let values = try source.resourceValues(forKeys: [.isDirectoryKey, .isRegularFileKey, .isSymbolicLinkKey])
+        guard values.isSymbolicLink != true,
+              values.isDirectory == true || (values.isRegularFile == true && ["md", "markdown"].contains(source.pathExtension.lowercased())) else {
+            throw ArticleError.invalid("Choose a Markdown file or folder inside this archive.")
+        }
+        try moveToTrash(source)
+    }
     @discardableResult public func importMarkdown(from source: URL, parent: URL) throws -> URL {
         guard ["md", "markdown"].contains(source.pathExtension.lowercased()) else { throw ArticleError.invalid("Choose a Markdown file (.md or .markdown).") }
         let text = try String(contentsOf: source, encoding: .utf8)

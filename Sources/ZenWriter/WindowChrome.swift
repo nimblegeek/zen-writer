@@ -1,6 +1,12 @@
 import AppKit
 import SwiftUI
 
+enum WriterCorners {
+    static let window: CGFloat = 20
+    static let control: CGFloat = 10
+    static let card: CGFloat = 12
+}
+
 @MainActor
 final class WriterWorkspace: ObservableObject {
     @Published private(set) var windows: [WriterWindow] = []
@@ -24,10 +30,12 @@ final class WriterWindow: ObservableObject, Identifiable {
     weak var window: NSWindow?
     @Published private(set) var title = "Untitled"
     @Published private(set) var edited = false
+    @Published private(set) var isFullScreen = false
     private var observations: [NSKeyValueObservation] = []
     private weak var document: NSDocument?
     private var documentObservation: NSKeyValueObservation?
     private var closeObserver: NSObjectProtocol?
+    private var fullScreenObservers: [NSObjectProtocol] = []
     func attach(_ window: NSWindow, theme: WriterTheme, workspace: WriterWorkspace) {
         if self.window !== window {
             self.window = window
@@ -38,6 +46,8 @@ final class WriterWindow: ObservableObject, Identifiable {
             window.tabbingMode = .disallowed
             window.toolbar = nil
             window.isMovableByWindowBackground = false
+            window.isOpaque = false
+            isFullScreen = window.styleMask.contains(.fullScreen)
             for button in [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton] { window.standardWindowButton(button)?.isHidden = true }
             title = window.title
             edited = window.isDocumentEdited
@@ -52,10 +62,16 @@ final class WriterWindow: ObservableObject, Identifiable {
             closeObserver = NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: window, queue: .main) { [weak self, weak workspace] _ in
                 Task { @MainActor in if let self { workspace?.unregister(self) } }
             }
+            fullScreenObservers = [NSWindow.didEnterFullScreenNotification, NSWindow.didExitFullScreenNotification].map { name in
+                NotificationCenter.default.addObserver(forName: name, object: window, queue: .main) { [weak self, weak window] _ in
+                    Task { @MainActor in self?.isFullScreen = window?.styleMask.contains(.fullScreen) ?? false }
+                }
+            }
             workspace.register(self)
         }
         refreshEditedState()
-        window.backgroundColor = theme.background
+        // Let the continuous SwiftUI window shape define the visible corners.
+        window.backgroundColor = .clear
         window.appearance = NSAppearance(named: theme.scheme == .dark ? .darkAqua : .aqua)
     }
     func refreshEditedState() {
@@ -70,7 +86,10 @@ final class WriterWindow: ObservableObject, Identifiable {
         let changed = document?.isDocumentEdited ?? window.isDocumentEdited
         if edited != changed { edited = changed }
     }
-    deinit { if let closeObserver { NotificationCenter.default.removeObserver(closeObserver) } }
+    deinit {
+        if let closeObserver { NotificationCenter.default.removeObserver(closeObserver) }
+        fullScreenObservers.forEach { NotificationCenter.default.removeObserver($0) }
+    }
 }
 
 struct WindowDragArea: NSViewRepresentable {
@@ -112,7 +131,7 @@ struct QuietButtonStyle: ButtonStyle {
         var body: some View {
             configuration.label
                 .foregroundStyle(Color(hover ? theme.foreground : theme.muted))
-                .background(Color(theme.selection).opacity(configuration.isPressed ? 1 : hover ? 0.65 : 0), in: RoundedRectangle(cornerRadius: 6))
+                .background(Color(theme.selection).opacity(configuration.isPressed ? 1 : hover ? 0.65 : 0), in: RoundedRectangle(cornerRadius: WriterCorners.control, style: .continuous))
                 .contentShape(Rectangle()).onHover { hover = $0 }
         }
     }
@@ -151,7 +170,7 @@ private struct DocumentTab: View {
         }
         .font(WriterFont.workSans.swiftUI(size: 12))
         .foregroundStyle(Color(selected ? theme.foreground : theme.muted))
-        .background(selected ? Color(theme.background) : .clear, in: RoundedRectangle(cornerRadius: 6))
+        .background(selected ? Color(theme.background) : .clear, in: RoundedRectangle(cornerRadius: WriterCorners.control, style: .continuous))
         .accessibilityElement(children: .contain)
     }
 }

@@ -1,4 +1,7 @@
-JetBrainsMono: https://github.com/JetBrains/JetBrainsMono/tree/19371302b95d218af43299bce79ddbddd0bc364d
 WorkSans: https://github.com/weiweihuanghuang/Work-Sans/tree/b35c81086186162164947bd39574683073d9b268
+
+NotoSerif: user-supplied Google Sans Flex Noto Serif.zip, Noto_Serif/static (Regular, SemiBold, Italic, Bold, BoldItalic).
+Upstream: https://github.com/notofonts/latin-greek-cyrillic
+Archive SHA-256: 22b574c97f481dcfc2c9d0f6c53db6137bf22d3e2f5fd80baa4d98a1a0917e24
 
 Unmodified fonts distributed under the included SIL Open Font License 1.1.

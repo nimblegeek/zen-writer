@@ -72,4 +72,51 @@ final class ArchiveTests: XCTestCase {
         XCTAssertThrowsError(try store.importMarkdown(from: temporary.appendingPathComponent("image.png"), parent: store.root))
         XCTAssertTrue(FileManager.default.fileExists(atPath: source.path))
     }
+
+    func testTrashMovesFileWithoutChangingContentsOrOtherTexts() throws {
+        let file = try store.create(name: "Draft", parent: store.root, isFolder: false, text: "Åäö — keep my words")
+        let other = try store.create(name: "Keep", parent: store.root, isFolder: false, text: "untouched")
+        let trashed = temporary.appendingPathComponent("trashed.md")
+        try store.trash(file) { try FileManager.default.moveItem(at: $0, to: trashed) }
+        XCTAssertFalse(FileManager.default.fileExists(atPath: file.path))
+        XCTAssertEqual(try String(contentsOf: trashed, encoding: .utf8), "Åäö — keep my words")
+        XCTAssertEqual(try String(contentsOf: other, encoding: .utf8), "untouched")
+        XCTAssertEqual(try store.contents().map(\.url), [other])
+    }
+    func testTrashMovesWholeFolderIncludingHiddenAndNonMarkdownFiles() throws {
+        let folder = try store.create(name: "Drafts", parent: store.root, isFolder: true)
+        let nested = try store.create(name: "Ideas", parent: folder, isFolder: true)
+        _ = try store.create(name: "Thought", parent: nested, isFolder: false, text: "recoverable")
+        try Data([1, 2, 3]).write(to: folder.appendingPathComponent("image.png"))
+        try Data("metadata".utf8).write(to: folder.appendingPathComponent(".hidden"))
+        let trashed = temporary.appendingPathComponent("Trashed folder")
+        try store.trash(folder) { try FileManager.default.moveItem(at: $0, to: trashed) }
+        XCTAssertTrue(try store.contents().isEmpty)
+        XCTAssertEqual(try String(contentsOf: trashed.appendingPathComponent("Ideas/Thought.md"), encoding: .utf8), "recoverable")
+        XCTAssertEqual(try Data(contentsOf: trashed.appendingPathComponent("image.png")), Data([1, 2, 3]))
+        XCTAssertEqual(try String(contentsOf: trashed.appendingPathComponent(".hidden"), encoding: .utf8), "metadata")
+    }
+    func testTrashRejectsRootOutsideFilesSymlinksAndMissingItemsBeforeMutation() throws {
+        let outside = temporary.appendingPathComponent("outside.md")
+        try Data("outside".utf8).write(to: outside)
+        let link = store.root.appendingPathComponent("linked.md")
+        try FileManager.default.createSymbolicLink(at: link, withDestinationURL: outside)
+        let directoryLink = store.root.appendingPathComponent("escape")
+        try FileManager.default.createSymbolicLink(at: directoryLink, withDestinationURL: temporary)
+        let nonMarkdown = store.root.appendingPathComponent("image.png")
+        try Data([4]).write(to: nonMarkdown)
+        for source in [store.root, outside, link, directoryLink.appendingPathComponent("outside.md"), nonMarkdown, store.root.appendingPathComponent("missing.md")] {
+            var invoked = false
+            XCTAssertThrowsError(try store.trash(source) { _ in invoked = true })
+            XCTAssertFalse(invoked, source.path)
+        }
+        XCTAssertEqual(try String(contentsOf: outside, encoding: .utf8), "outside")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: store.root.path))
+    }
+    func testTrashFailureKeepsOriginalWriting() throws {
+        let file = try store.create(name: "Keep", parent: store.root, isFolder: false, text: "still here")
+        XCTAssertThrowsError(try store.trash(file) { _ in throw CocoaError(.fileWriteNoPermission) })
+        XCTAssertEqual(try String(contentsOf: file, encoding: .utf8), "still here")
+        XCTAssertEqual(try store.contents().map(\.url), [file])
+    }
 }

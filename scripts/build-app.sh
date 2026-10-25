@@ -11,6 +11,8 @@ cp Resources/Info.plist 'build/Zen Writer.app/Contents/Info.plist'
 if [[ -f Resources/AppIcon.icns ]]; then
   cp Resources/AppIcon.icns 'build/Zen Writer.app/Contents/Resources/AppIcon.icns'
 fi
+# Recreate bundled fonts so removed families do not linger in incremental builds.
+rm -rf 'build/Zen Writer.app/Contents/Resources/Fonts'
 mkdir -p 'build/Zen Writer.app/Contents/Resources/Fonts'
 cp Resources/Fonts/* 'build/Zen Writer.app/Contents/Resources/Fonts/'
 codesign --force --sign - 'build/Zen Writer.app'

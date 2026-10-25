@@ -8,6 +8,7 @@ final class ArchiveModel: ObservableObject {
     @Published private(set) var items: [ArchiveItem] = []
     @Published private(set) var root: URL
     @Published var error: String?
+    @Published private(set) var isTrashing = false
     private var store: ArchiveStore?
     static var defaultRoot: URL {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -75,6 +76,49 @@ final class ArchiveModel: ObservableObject {
                 }
             }
         } else { try store.move(from: item.url, to: destination) }
+        refresh()
+    }
+    func trash(_ item: ArchiveItem) async throws {
+        guard !isTrashing else { return }
+        guard let store else { throw ArticleError.invalid("The archive could not be opened.") }
+        try store.validate(item.url, allowRoot: false)
+        isTrashing = true
+        defer { isTrashing = false }
+        let source = item.url.standardizedFileURL
+        func affected(_ document: NSDocument) -> Bool {
+            guard let url = document.fileURL?.standardizedFileURL else { return false }
+            return url == source || (item.isFolder && url.path.hasPrefix(source.path + "/"))
+        }
+        let documents = NSDocumentController.shared.documents.filter(affected)
+        for document in documents {
+            guard let url = document.fileURL, let type = document.fileType else {
+                throw ArticleError.invalid("Save or close the open text before moving it to Trash.")
+            }
+            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                document.save(to: url, ofType: type, for: .saveOperation) { error in
+                    if let error { continuation.resume(throwing: error) }
+                    else { continuation.resume() }
+                }
+            }
+        }
+        // A save can yield to edits, a new window, or an archive change. Recheck before moving anything.
+        let currentDocuments = NSDocumentController.shared.documents.filter(affected)
+        guard root == store.root,
+              Set(currentDocuments.map(ObjectIdentifier.init)) == Set(documents.map(ObjectIdentifier.init)),
+              currentDocuments.allSatisfy({ !$0.isDocumentEdited }) else {
+            throw ArticleError.invalid("The archive or an open text changed while saving. Nothing was moved to Trash. Please try again.")
+        }
+        // Close saved documents first so pending autosaves and temporary save backups finish in place.
+        // No suspension between the final saved-state check and closing these windows.
+        let reopenURLs = currentDocuments.compactMap(\.fileURL)
+        currentDocuments.forEach { $0.close() }
+        if NSDocumentController.shared.documents.isEmpty { NSDocumentController.shared.newDocument(nil) }
+        do { try store.trash(source) }
+        catch {
+            for url in reopenURLs { open(url, from: nil) }
+            throw error
+        }
+        expandedFolders = expandedFolders.filter { $0 != source && !$0.path.hasPrefix(source.path + "/") }
         refresh()
     }
     func open(_ url: URL, from window: NSWindow?) {

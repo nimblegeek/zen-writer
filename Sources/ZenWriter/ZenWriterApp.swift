@@ -4,6 +4,9 @@ import SwiftUI
 struct ZenWriterApp: App {
     init() {
         WriterFont.registerBundledFonts()
+        if let storedFont = UserDefaults.standard.string(forKey: "writerFontFamily"), ["jetBrainsMono", "consolas"].contains(storedFont) {
+            UserDefaults.standard.set(WriterFont.menlo.rawValue, forKey: "writerFontFamily")
+        }
         NSWindow.allowsAutomaticWindowTabbing = false
     }
     @StateObject private var workspace = WriterWorkspace()
